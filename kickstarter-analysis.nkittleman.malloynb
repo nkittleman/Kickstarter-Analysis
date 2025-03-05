@@ -1,0 +1,83 @@
+>>>malloy
+source: kickstarter is duckdb.table('./kickstarter-camp.csv') extend {
+    dimension: greatest_average is 100 * (PledgedUSD / Goal)
+    measure: avg_greatest is avg(greatest_average)
+}
+>>>markdown
+1. Which day of the week leads to the greatest average donations?
+>>>markdown
+Answer: Tuesday
+>>>malloy
+run: kickstarter -> {
+    group_by: `Created At Weekday`
+    aggregate: avg_pledge is avg(PledgedUSD)
+    order_by: avg_pledge desc
+}
+>>>markdown
+2. Does being a staff pick affect the average number of backers?
+>>>markdown
+Answer: Yes, staff picks have significantly more backers.
+>>>malloy
+run: kickstarter -> {
+    group_by: `Staff Pick`
+    aggregate: avg_backers is avg(Backers)
+    order_by: avg_backers desc
+}
+>>>markdown
+3. Do any of the following seem to be related to becoming a staff pick:
+        - Avg Campaign Length
+        - Avg Blurb Length
+        - Avg Goal
+>>>markdown
+Answer: Yes, average goal is correlated with staff pick. Lower goals are more likely to be picked by staff. Average campaign length and average blurb are not correlated with staff picks.
+>>>malloy
+run: kickstarter -> {
+    group_by: `Staff Pick`
+    aggregate: avg_campaign is avg(CampaignLength)
+    aggregate: avg_blurb is avg(`Blurb Len`)
+    aggregate: avg_goal is avg(Goal)
+}
+>>>markdown
+4. For which category was it better (in terms of average pledge amount) to not be spotlighted?
+>>>markdown
+Answer: Comedy
+>>>malloy
+run: kickstarter -> {
+    group_by: Category
+    aggregate: total_pledge is sum(PledgedUSD)
+        nest: Category_by_spotlight is {
+            group_by: Spotlight
+            aggregate: total_pledge is sum(PledgedUSD)
+        }
+    }
+>>>markdown
+5. Why do campaigns fail? (Hint: look at average backers by status)
+>>>markdown
+Answer: They do not have enough backers.
+>>>malloy
+run: kickstarter -> {
+    group_by: Status
+    aggregate: avg_backers is avg(Backers)
+    order_by: avg_backers desc
+}
+>>>markdown
+6. Which category had the greatest average pledged as a percent of their goal? (Hint: create new field as 100 * (pledged / goal))
+>>>markdown
+Answer: Hardware
+>>>malloy
+run: kickstarter -> {
+    group_by: Category
+    aggregate: avg_greatest
+    order_by: avg_greatest desc
+}
+>>>markdown
+7. From 2009 until the end of 2016, what is the general trend in the total number of backers?
+>>>markdown
+Answer: Total number of backers significantly increased between 2009 and 2016.
+>>>malloy
+# line_chart
+run: kickstarter -> {
+    where: `Created At` >= @2009-01-01 and `Created At` <= @2016-12-31
+    group_by: `Created At`.year
+    aggregate: total_backers is sum(Backers)
+}
